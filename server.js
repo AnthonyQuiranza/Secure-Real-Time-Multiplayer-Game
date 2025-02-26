@@ -9,7 +9,6 @@ const nocache = require('nocache');
 const fccTestingRoutes = require('./routes/fcctesting.js');
 const runner = require('./test-runner.js');
 
-// Definimos Collectible
 function Collectible({ x, y, value, id }) {
     this.x = x;
     this.y = y;
@@ -20,7 +19,16 @@ function Collectible({ x, y, value, id }) {
 
 const app = express();
 
-// Aplicar nocache primero para todas las rutas
+// Middleware global para forzar no-cache en todas las respuestas
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    next();
+});
+
+// Usar nocache como respaldo
 app.use(nocache());
 
 // Configuración de seguridad con Helmet
@@ -36,19 +44,19 @@ app.use(helmet({
     xssFilter: true
 }));
 
-// Servir archivos estáticos con opciones de no-cache
+// Archivos estáticos con cabeceras explícitas
 app.use('/public', express.static(process.cwd() + '/public', {
     setHeaders: (res) => {
-        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-        res.set('Pragma', 'no-cache');
-        res.set('Expires', '0');
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
     }
 }));
 app.use('/assets', express.static(process.cwd() + '/assets', {
     setHeaders: (res) => {
-        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-        res.set('Pragma', 'no-cache');
-        res.set('Expires', '0');
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
     }
 }));
 
@@ -91,7 +99,26 @@ const server = app.listen(portNum, () => {
     }
 });
 
-const io = socket(server);
+const io = socket(server, {
+    serveClient: true,
+    // Asegurar que el archivo de Socket.io no se almacene en caché
+    transports: ['websocket', 'polling'],
+    // Personalizar las cabeceras del cliente de Socket.io
+    handlePreflightRequest: (req, res) => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('ok');
+    }
+});
+
+// Asegurar que el archivo socket.io.js no se cachee
+io.engine.on('headers', (headers) => {
+    headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, private';
+    headers['Pragma'] = 'no-cache';
+    headers['Expires'] = '0';
+});
 
 function generateCollectible() {
     const id = Math.random().toString(36).substr(2, 9);
