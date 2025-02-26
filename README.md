@@ -18,5 +18,3 @@ El juego es funcionalmente similar al ejemplo de freeCodeCamp: https://secure-re
 - Movimiento con teclas WASD o flechas.
 - Clasificación dinámica basada en puntajes.
 - Seguridad: protección contra XSS, ocultamiento de MIME types, sin caché en el cliente, y cabeceras falsas de PHP 7.4.3.
-
-## Estructura del Proyecto
